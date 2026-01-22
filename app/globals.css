@@ -4,88 +4,112 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.98 0.005 220);
-  --foreground: oklch(0.2 0.02 250);
+  /* Bright, Clean, Clinical Tech Theme (Light Mode) */
+  --background: oklch(0.97 0.01 240); /* Very slight blue tint white */
+  --foreground: oklch(0.2 0.03 240); /* Deep Tech Blue text */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.02 250);
+  --card-foreground: oklch(0.2 0.03 240);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.02 250);
-  --primary: oklch(0.55 0.15 220);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.01 220);
-  --secondary-foreground: oklch(0.3 0.02 250);
-  --muted: oklch(0.94 0.01 220);
-  --muted-foreground: oklch(0.5 0.02 250);
-  --accent: oklch(0.6 0.12 180);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.9 0.01 220);
-  --input: oklch(0.92 0.01 220);
-  --ring: oklch(0.55 0.15 220);
-  --chart-1: oklch(0.55 0.15 220);
-  --chart-2: oklch(0.6 0.12 180);
-  --chart-3: oklch(0.65 0.18 145);
-  --chart-4: oklch(0.75 0.15 85);
-  --chart-5: oklch(0.55 0.2 25);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.25 0.03 250);
-  --sidebar-foreground: oklch(0.95 0.01 220);
-  --sidebar-primary: oklch(0.55 0.15 220);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.35 0.03 250);
-  --sidebar-accent-foreground: oklch(0.95 0.01 220);
-  --sidebar-border: oklch(0.35 0.02 250);
-  --sidebar-ring: oklch(0.55 0.15 220);
+  --popover-foreground: oklch(0.2 0.03 240);
   
-  /* Healthcare specific colors */
-  --success: oklch(0.65 0.18 145);
+  /* Primary Grid/Tech Blue - "Electric Blue" */
+  --primary: oklch(0.55 0.22 260); 
+  --primary-foreground: oklch(1 0 0);
+  
+  /* Secondary - "Clean Silver" */
+  --secondary: oklch(0.95 0.02 240);
+  --secondary-foreground: oklch(0.3 0.05 260);
+  
+  --muted: oklch(0.96 0.01 240);
+  --muted-foreground: oklch(0.5 0.05 240);
+  
+  /* Accent - "Neon Cyan" for that catchy look */
+  --accent: oklch(0.85 0.15 190);
+  --accent-foreground: oklch(0.2 0.05 260);
+  
+  --destructive: oklch(0.6 0.2 20);
+  --destructive-foreground: oklch(0.98 0 0);
+  
+  --border: oklch(0.9 0.05 240);
+  --input: oklch(0.92 0.04 240);
+  --ring: oklch(0.55 0.22 260);
+  
+  --radius: 0.75rem;
+
+  /* Chart & Status Colors */
+  --chart-1: oklch(0.55 0.22 260); /* Blue */
+  --chart-2: oklch(0.7 0.15 180); /* Cyan */
+  --chart-3: oklch(0.65 0.2 140); /* Green */
+  --chart-4: oklch(0.6 0.2 300); /* Purple */
+  --chart-5: oklch(0.6 0.2 30);  /* Red */
+  
+  --sidebar: oklch(0.98 0.01 240);
+  --sidebar-foreground: oklch(0.2 0.03 240);
+  --sidebar-primary: oklch(0.55 0.22 260);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.95 0.02 240);
+  --sidebar-accent-foreground: oklch(0.2 0.03 240);
+  --sidebar-border: oklch(0.9 0.05 240);
+  --sidebar-ring: oklch(0.55 0.22 260);
+  
+  --success: oklch(0.65 0.2 140);
   --success-foreground: oklch(1 0 0);
-  --warning: oklch(0.75 0.15 85);
-  --warning-foreground: oklch(0.2 0.02 85);
-  --critical: oklch(0.55 0.2 25);
+  --warning: oklch(0.85 0.15 90);
+  --warning-foreground: oklch(0.2 0.05 90);
+  --critical: oklch(0.6 0.22 30);
   --critical-foreground: oklch(1 0 0);
 }
 
 .dark {
-  --background: oklch(0.15 0.02 250);
-  --foreground: oklch(0.95 0.01 220);
-  --card: oklch(0.2 0.02 250);
-  --card-foreground: oklch(0.95 0.01 220);
-  --popover: oklch(0.2 0.02 250);
-  --popover-foreground: oklch(0.95 0.01 220);
-  --primary: oklch(0.6 0.15 220);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.25 0.02 250);
-  --secondary-foreground: oklch(0.9 0.01 220);
-  --muted: oklch(0.25 0.02 250);
-  --muted-foreground: oklch(0.6 0.02 250);
-  --accent: oklch(0.55 0.12 180);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.5 0.2 25);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.3 0.02 250);
-  --input: oklch(0.25 0.02 250);
-  --ring: oklch(0.6 0.15 220);
-  --chart-1: oklch(0.6 0.15 220);
-  --chart-2: oklch(0.55 0.12 180);
-  --chart-3: oklch(0.7 0.18 145);
-  --chart-4: oklch(0.8 0.15 85);
-  --chart-5: oklch(0.6 0.2 25);
-  --sidebar: oklch(0.15 0.02 250);
-  --sidebar-foreground: oklch(0.95 0.01 220);
-  --sidebar-primary: oklch(0.6 0.15 220);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.25 0.02 250);
-  --sidebar-accent-foreground: oklch(0.95 0.01 220);
-  --sidebar-border: oklch(0.3 0.02 250);
-  --sidebar-ring: oklch(0.6 0.15 220);
+  /* Futuristic Dark Mode - Deep Space Blue Background */
+  --background: oklch(0.12 0.05 260); 
+  --foreground: oklch(0.95 0.02 240);
   
-  --success: oklch(0.7 0.18 145);
-  --success-foreground: oklch(1 0 0);
-  --warning: oklch(0.8 0.15 85);
-  --warning-foreground: oklch(0.2 0.02 85);
-  --critical: oklch(0.6 0.2 25);
+  --card: oklch(0.18 0.05 260);
+  --card-foreground: oklch(0.95 0.02 240);
+  
+  --popover: oklch(0.15 0.05 260);
+  --popover-foreground: oklch(0.95 0.02 240);
+  
+  --primary: oklch(0.6 0.2 250); /* Vivid Blue */
+  --primary-foreground: oklch(1 0 0);
+  
+  --secondary: oklch(0.25 0.08 260);
+  --secondary-foreground: oklch(0.9 0.02 240);
+  
+  --muted: oklch(0.2 0.05 260);
+  --muted-foreground: oklch(0.7 0.05 240);
+  
+  --accent: oklch(0.6 0.18 190); /* Cyan Glow */
+  --accent-foreground: oklch(1 0 0);
+  
+  --destructive: oklch(0.5 0.25 25);
+  --destructive-foreground: oklch(1 0 0);
+  
+  --border: oklch(0.25 0.08 260);
+  --input: oklch(0.25 0.08 260);
+  --ring: oklch(0.6 0.2 250);
+
+  --chart-1: oklch(0.6 0.2 250);
+  --chart-2: oklch(0.7 0.18 180);
+  --chart-3: oklch(0.65 0.2 140);
+  --chart-4: oklch(0.6 0.2 300);
+  --chart-5: oklch(0.6 0.25 30);
+  
+  --sidebar: oklch(0.15 0.05 260);
+  --sidebar-foreground: oklch(0.95 0.02 240);
+  --sidebar-primary: oklch(0.6 0.2 250);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.25 0.08 260);
+  --sidebar-accent-foreground: oklch(0.95 0.02 240);
+  --sidebar-border: oklch(0.25 0.08 260);
+  --sidebar-ring: oklch(0.6 0.2 250);
+  
+  --success: oklch(0.7 0.18 140);
+  --success-foreground: oklch(0.1 0.05 140);
+  --warning: oklch(0.85 0.15 90);
+  --warning-foreground: oklch(0.1 0.05 90);
+  --critical: oklch(0.6 0.25 30);
   --critical-foreground: oklch(1 0 0);
 }
 
