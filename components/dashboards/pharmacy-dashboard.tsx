@@ -25,13 +25,43 @@ import {
   TrendingDown,
   User,
   Stethoscope,
+  Plus,
+  PenSquare,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
-  const { patients, doctors, medicines, prescriptions, dispensePrescription } = useHospital();
+  const { patients, doctors, medicines, prescriptions, dispensePrescription, addMedicine, updateMedicineStock } = useHospital();
   const [searchTerm, setSearchTerm] = useState('');
+  const [isAddMedicineOpen, setIsAddMedicineOpen] = useState(false);
+  const [newMedicine, setNewMedicine] = useState({ name: '', stock: 0, unit: 'tablets', lowStockThreshold: 10 });
+  const [editingStock, setEditingStock] = useState<{ id: string, name: string, stock: number } | null>(null);
+
+  const handleAddMedicine = () => {
+    if (newMedicine.name && newMedicine.stock >= 0) {
+      addMedicine(newMedicine);
+      setIsAddMedicineOpen(false);
+      setNewMedicine({ name: '', stock: 0, unit: 'tablets', lowStockThreshold: 10 });
+    }
+  };
+
+  const handleUpdateStock = () => {
+    if (editingStock) {
+      updateMedicineStock(editingStock.id, editingStock.stock);
+      setEditingStock(null);
+    }
+  };
 
   const pendingPrescriptions = prescriptions.filter(p => !p.dispensed);
   const dispensedToday = prescriptions.filter(
@@ -39,7 +69,7 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
   );
   const lowStockMedicines = medicines.filter(m => m.stock <= m.lowStockThreshold);
 
-  const filteredMedicines = medicines.filter(m => 
+  const filteredMedicines = medicines.filter(m =>
     m.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -112,9 +142,9 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
                 {pendingPrescriptions.map(prescription => {
                   const patient = patients.find(p => p.id === prescription.patientId);
                   const doctor = doctors.find(d => d.id === prescription.doctorId);
-                  
+
                   return (
-                    <div 
+                    <div
                       key={prescription.id}
                       className="p-4 rounded-lg border bg-card"
                     >
@@ -145,7 +175,7 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
                           Dispense
                         </Button>
                       </div>
-                      
+
                       <div className="bg-muted/50 rounded-lg p-3">
                         <h4 className="text-sm font-medium mb-2">Medicines</h4>
                         <Table>
@@ -161,7 +191,7 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
                             {prescription.items.map(item => {
                               const medicine = medicines.find(m => m.id === item.medicineId);
                               const isLowStock = medicine && medicine.stock < item.quantity;
-                              
+
                               return (
                                 <TableRow key={item.medicineId}>
                                   <TableCell className="font-medium">{item.medicineName}</TableCell>
@@ -217,7 +247,7 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
                   {dispensedToday.map(prescription => {
                     const patient = patients.find(p => p.id === prescription.patientId);
                     const doctor = doctors.find(d => d.id === prescription.doctorId);
-                    
+
                     return (
                       <TableRow key={prescription.id}>
                         <TableCell className="font-mono">{prescription.id}</TableCell>
@@ -272,6 +302,85 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
           />
         </div>
 
+        {/* Add Medicine Dialog */}
+        <Dialog open={isAddMedicineOpen} onOpenChange={setIsAddMedicineOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Medicine</DialogTitle>
+              <DialogDescription>Add a new medicine to the hospital inventory.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">Name</Label>
+                <Input
+                  id="name"
+                  value={newMedicine.name}
+                  onChange={(e) => setNewMedicine({ ...newMedicine, name: e.target.value })}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="stock" className="text-right">Stock</Label>
+                <Input
+                  id="stock"
+                  type="number"
+                  value={newMedicine.stock}
+                  onChange={(e) => setNewMedicine({ ...newMedicine, stock: parseInt(e.target.value) || 0 })}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="unit" className="text-right">Unit</Label>
+                <Input
+                  id="unit"
+                  value={newMedicine.unit}
+                  onChange={(e) => setNewMedicine({ ...newMedicine, unit: e.target.value })}
+                  className="col-span-3"
+                  placeholder="e.g. tablets, bottles"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="threshold" className="text-right">Threshold</Label>
+                <Input
+                  id="threshold"
+                  type="number"
+                  value={newMedicine.lowStockThreshold}
+                  onChange={(e) => setNewMedicine({ ...newMedicine, lowStockThreshold: parseInt(e.target.value) || 0 })}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleAddMedicine}>Add Medicine</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Update Stock Dialog */}
+        <Dialog open={!!editingStock} onOpenChange={(open) => !open && setEditingStock(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Update Stock</DialogTitle>
+              <DialogDescription>Update stock count for {editingStock?.name}</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-stock" className="text-right">New Stock</Label>
+                <Input
+                  id="edit-stock"
+                  type="number"
+                  value={editingStock?.stock || 0}
+                  onChange={(e) => setEditingStock(prev => prev ? { ...prev, stock: parseInt(e.target.value) || 0 } : null)}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleUpdateStock}>Update Stock</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Inventory Table */}
         <Card>
           <CardHeader>
@@ -280,6 +389,10 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
               Medicine Inventory
             </CardTitle>
             <CardDescription>Current stock levels and alerts</CardDescription>
+            <Button size="sm" onClick={() => setIsAddMedicineOpen(true)} className="ml-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Medicine
+            </Button>
           </CardHeader>
           <CardContent>
             <Table>
@@ -291,6 +404,7 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
                   <TableHead>Unit</TableHead>
                   <TableHead>Stock Level</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -298,7 +412,7 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
                   const stockPercentage = (medicine.stock / (medicine.lowStockThreshold * 5)) * 100;
                   const isLow = medicine.stock <= medicine.lowStockThreshold;
                   const isCritical = medicine.stock <= medicine.lowStockThreshold / 2;
-                  
+
                   return (
                     <TableRow key={medicine.id}>
                       <TableCell className="font-mono">{medicine.id}</TableCell>
@@ -306,8 +420,8 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
                       <TableCell>{medicine.stock}</TableCell>
                       <TableCell>{medicine.unit}</TableCell>
                       <TableCell className="w-32">
-                        <Progress 
-                          value={Math.min(stockPercentage, 100)} 
+                        <Progress
+                          value={Math.min(stockPercentage, 100)}
                           className={cn(
                             'h-2',
                             isCritical && '[&>div]:bg-destructive',
@@ -333,6 +447,15 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
                           </Badge>
                         )}
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setEditingStock({ id: medicine.id, name: medicine.name, stock: medicine.stock })}
+                        >
+                          <PenSquare className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -349,10 +472,15 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {medicines.slice(0, 8).map(medicine => {
-                // Simulate usage count
-                const usageCount = Math.floor(Math.random() * 20) + 5;
-                
+              {medicines.map(medicine => {
+                // Calculate real usage from dispensed prescriptions today
+                const usageCount = dispensedToday.reduce((total, prescription) => {
+                  const item = prescription.items.find(i => i.medicineId === medicine.id);
+                  return total + (item ? item.quantity : 0);
+                }, 0);
+
+                if (usageCount === 0) return null;
+
                 return (
                   <div key={medicine.id} className="p-3 rounded-lg bg-muted/50">
                     <p className="text-sm font-medium truncate">{medicine.name}</p>
@@ -362,9 +490,14 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
                 );
               })}
             </div>
+            {dispensedToday.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No medicines dispensed today</p>
+              </div>
+            )}
           </CardContent>
         </Card>
-      </div>
+      </div >
     );
   }
 

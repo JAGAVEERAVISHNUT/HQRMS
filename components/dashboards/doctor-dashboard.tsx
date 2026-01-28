@@ -1,5 +1,6 @@
 'use client';
 
+
 import { useState } from 'react';
 import { useHospital } from '@/lib/hospital-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -34,19 +42,20 @@ import { cn } from '@/lib/utils';
 import type { PrescriptionItem } from '@/lib/types';
 
 export function DoctorDashboard({ activeTab }: { activeTab: string }) {
-  const { 
-    patients, 
-    doctors, 
-    medicines, 
-    callNextPatient, 
+  const {
+    patients,
+    doctors,
+    medicines,
+    callNextPatient,
     completeConsultation,
     createPrescription,
     admitPatient,
-    getWaitingTime 
+    getWaitingTime
   } = useHospital();
-  
-  // Assume logged in as Dr. Smith (D001) for demo
-  const currentDoctor = doctors.find(d => d.id === 'D001') || doctors[0];
+
+  // Allow switching doctors for demo purposes
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>('D001');
+  const currentDoctor = doctors.find(d => d.id === selectedDoctorId) || doctors[0];
   const [prescriptionItems, setPrescriptionItems] = useState<PrescriptionItem[]>([]);
   const [showPrescriptionDialog, setShowPrescriptionDialog] = useState(false);
   const [showAdmitDialog, setShowAdmitDialog] = useState(false);
@@ -80,13 +89,13 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
   };
 
   const handleUpdateDosage = (medicineId: string, dosage: string) => {
-    setPrescriptionItems(prev => prev.map(i => 
+    setPrescriptionItems(prev => prev.map(i =>
       i.medicineId === medicineId ? { ...i, dosage } : i
     ));
   };
 
   const handleUpdateQuantity = (medicineId: string, quantity: number) => {
-    setPrescriptionItems(prev => prev.map(i => 
+    setPrescriptionItems(prev => prev.map(i =>
       i.medicineId === medicineId ? { ...i, quantity } : i
     ));
   };
@@ -111,6 +120,23 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
   if (activeTab === 'queue') {
     return (
       <div className="space-y-6">
+        <div className="flex justify-end mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Viewing as:</span>
+            <Select value={currentDoctor.id} onValueChange={setSelectedDoctorId}>
+              <SelectTrigger className="w-[280px]">
+                <SelectValue placeholder="Select Doctor" />
+              </SelectTrigger>
+              <SelectContent>
+                {doctors.map((doctor) => (
+                  <SelectItem key={doctor.id} value={doctor.id}>
+                    {doctor.name} ({doctor.specialization})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         {/* Queue Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -159,8 +185,8 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {patients.filter(p => 
-                  p.assignedDoctor === currentDoctor.id && 
+                {patients.filter(p =>
+                  p.assignedDoctor === currentDoctor.id &&
                   ['pharmacy', 'admitted', 'discharged'].includes(p.status) &&
                   new Date(p.registeredAt).toDateString() === new Date().toDateString()
                 ).length}
@@ -177,8 +203,8 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                 <CardTitle>Patient Queue</CardTitle>
                 <CardDescription>Patients waiting for consultation</CardDescription>
               </div>
-              <Button 
-                onClick={handleCallNext} 
+              <Button
+                onClick={handleCallNext}
                 disabled={queuePatients.length === 0 || currentPatient !== undefined}
               >
                 <UserCheck className="h-4 w-4 mr-2" />
@@ -190,7 +216,7 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
             {queuePatients.length > 0 ? (
               <div className="space-y-2">
                 {queuePatients.map((patient, index) => (
-                  <div 
+                  <div
                     key={patient.id}
                     className={cn(
                       'flex items-center justify-between p-4 rounded-lg border transition-all',
@@ -242,6 +268,23 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
   if (activeTab === 'patient') {
     return (
       <div className="space-y-6">
+        <div className="flex justify-end mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Viewing as:</span>
+            <Select value={currentDoctor.id} onValueChange={setSelectedDoctorId}>
+              <SelectTrigger className="w-[280px]">
+                <SelectValue placeholder="Select Doctor" />
+              </SelectTrigger>
+              <SelectContent>
+                {doctors.map((doctor) => (
+                  <SelectItem key={doctor.id} value={doctor.id}>
+                    {doctor.name} ({doctor.specialization})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         {currentPatient ? (
           <>
             {/* Current Patient Info */}
@@ -261,7 +304,7 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                   </div>
                   <Badge variant={
                     currentPatient.classification === 'emergency' ? 'destructive' :
-                    currentPatient.classification === 'specialist' ? 'secondary' : 'default'
+                      currentPatient.classification === 'specialist' ? 'secondary' : 'default'
                   } className="text-sm px-4 py-1">
                     {currentPatient.classification.toUpperCase()}
                   </Badge>
@@ -323,14 +366,14 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                           Select medicines for {currentPatient.name}
                         </DialogDescription>
                       </DialogHeader>
-                      
+
                       <div className="space-y-4">
                         {/* Medicine Selection */}
                         <div>
                           <Label>Available Medicines</Label>
                           <div className="grid grid-cols-2 gap-2 mt-2 max-h-40 overflow-auto">
                             {medicines.filter(m => m.stock > 0).map(medicine => (
-                              <div 
+                              <div
                                 key={medicine.id}
                                 className={cn(
                                   'flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors',
@@ -338,13 +381,13 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                                     ? 'bg-primary/10 border-primary'
                                     : 'hover:bg-muted'
                                 )}
-                                onClick={() => 
+                                onClick={() =>
                                   prescriptionItems.find(i => i.medicineId === medicine.id)
                                     ? handleRemoveMedicine(medicine.id)
                                     : handleAddMedicine(medicine.id)
                                 }
                               >
-                                <Checkbox 
+                                <Checkbox
                                   checked={!!prescriptionItems.find(i => i.medicineId === medicine.id)}
                                 />
                                 <div className="flex-1">
@@ -381,8 +424,8 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                                     onChange={(e) => handleUpdateQuantity(item.medicineId, parseInt(e.target.value) || 0)}
                                     className="w-20"
                                   />
-                                  <Button 
-                                    size="icon" 
+                                  <Button
+                                    size="icon"
                                     variant="ghost"
                                     onClick={() => handleRemoveMedicine(item.medicineId)}
                                   >
@@ -408,8 +451,8 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                   </Dialog>
 
                   {/* Refer */}
-                  <Button 
-                    className="h-auto py-6 flex-col gap-2 bg-transparent" 
+                  <Button
+                    className="h-auto py-6 flex-col gap-2 bg-transparent"
                     variant="outline"
                     onClick={() => completeConsultation(currentDoctor.id, 'refer')}
                   >
@@ -434,7 +477,7 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                           Select bed type for {currentPatient.name}
                         </DialogDescription>
                       </DialogHeader>
-                      
+
                       <div className="space-y-4">
                         <div className="grid grid-cols-3 gap-4">
                           {(['general', 'icu', 'emergency'] as const).map(type => (
@@ -442,8 +485,8 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                               key={type}
                               className={cn(
                                 'p-4 rounded-lg border-2 cursor-pointer text-center transition-all',
-                                selectedBedType === type 
-                                  ? 'border-primary bg-primary/10' 
+                                selectedBedType === type
+                                  ? 'border-primary bg-primary/10'
                                   : 'border-border hover:border-primary/50'
                               )}
                               onClick={() => setSelectedBedType(type)}
@@ -480,7 +523,7 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
               <Stethoscope className="h-16 w-16 text-muted-foreground/50 mb-4" />
               <h3 className="text-xl font-semibold mb-2">No Patient in Consultation</h3>
               <p className="text-muted-foreground mb-4">
-                {queuePatients.length > 0 
+                {queuePatients.length > 0
                   ? `${queuePatients.length} patients waiting in queue`
                   : 'No patients in queue'
                 }

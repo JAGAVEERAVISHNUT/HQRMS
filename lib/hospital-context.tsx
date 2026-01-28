@@ -54,6 +54,8 @@ interface HospitalContextType {
   prescriptions: Prescription[];
   createPrescription: (patientId: string, doctorId: string, items: Prescription['items']) => Prescription;
   dispensePrescription: (prescriptionId: string) => void;
+  addMedicine: (medicine: Omit<Medicine, 'id'>) => void;
+  updateMedicineStock: (medicineId: string, newStock: number) => void;
 
   // Utilities
   getWaitingTime: (patientId: string) => number;
@@ -86,7 +88,7 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
   const registerPatient = useCallback((data: Omit<Patient, 'id' | 'classification' | 'status' | 'registeredAt' | 'tokenNumber'>) => {
     const classification = classifyPatient(data.symptoms, data.age);
     const tokenNumber = ++tokenCounter;
-    
+
     const newPatient: Patient = {
       ...data,
       id: generatePatientId(),
@@ -106,9 +108,9 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
     if (availableDoctor) {
       newPatient.assignedDoctor = availableDoctor.id;
       newPatient.status = classification === 'emergency' ? 'waiting' : 'waiting';
-      
-      setDoctors(prev => prev.map(d => 
-        d.id === availableDoctor.id 
+
+      setDoctors(prev => prev.map(d =>
+        d.id === availableDoctor.id
           ? { ...d, queue: [...d.queue, newPatient.id] }
           : d
       ));
@@ -119,23 +121,23 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
   }, [doctors]);
 
   const updatePatientStatus = useCallback((patientId: string, status: PatientStatus) => {
-    setPatients(prev => prev.map(p => 
+    setPatients(prev => prev.map(p =>
       p.id === patientId ? { ...p, status } : p
     ));
   }, []);
 
   const assignDoctorToPatient = useCallback((patientId: string, doctorId: string) => {
-    setPatients(prev => prev.map(p => 
+    setPatients(prev => prev.map(p =>
       p.id === patientId ? { ...p, assignedDoctor: doctorId, status: 'waiting' } : p
     ));
-    setDoctors(prev => prev.map(d => 
+    setDoctors(prev => prev.map(d =>
       d.id === doctorId ? { ...d, queue: [...d.queue, patientId] } : d
     ));
   }, []);
 
   // Doctor Operations
   const updateDoctorStatus = useCallback((doctorId: string, status: DoctorStatus) => {
-    setDoctors(prev => prev.map(d => 
+    setDoctors(prev => prev.map(d =>
       d.id === doctorId ? { ...d, status } : d
     ));
   }, []);
@@ -148,12 +150,12 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
     const patient = patients.find(p => p.id === nextPatientId);
 
     if (patient) {
-      setDoctors(prev => prev.map(d => 
-        d.id === doctorId 
+      setDoctors(prev => prev.map(d =>
+        d.id === doctorId
           ? { ...d, queue: d.queue.slice(1), currentPatientId: nextPatientId, status: 'busy' }
           : d
       ));
-      setPatients(prev => prev.map(p => 
+      setPatients(prev => prev.map(p =>
         p.id === nextPatientId ? { ...p, status: 'in-consultation' } : p
       ));
     }
@@ -166,20 +168,20 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
     if (!doctor || !doctor.currentPatientId) return;
 
     const patientId = doctor.currentPatientId;
-    
-    setDoctors(prev => prev.map(d => 
-      d.id === doctorId 
+
+    setDoctors(prev => prev.map(d =>
+      d.id === doctorId
         ? { ...d, currentPatientId: undefined, status: 'available' }
         : d
     ));
 
     if (action === 'prescribe') {
-      setPatients(prev => prev.map(p => 
+      setPatients(prev => prev.map(p =>
         p.id === patientId ? { ...p, status: 'pharmacy' } : p
       ));
     } else if (action === 'admit') {
       // Patient will be admitted through bed management
-      setPatients(prev => prev.map(p => 
+      setPatients(prev => prev.map(p =>
         p.id === patientId ? { ...p, status: 'registered' } : p
       ));
     }
@@ -190,10 +192,10 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
     const availableBed = beds.find(b => b.type === bedType && b.status === 'available');
     if (!availableBed) return null;
 
-    setBeds(prev => prev.map(b => 
+    setBeds(prev => prev.map(b =>
       b.id === availableBed.id ? { ...b, status: 'occupied', patientId } : b
     ));
-    setPatients(prev => prev.map(p => 
+    setPatients(prev => prev.map(p =>
       p.id === patientId ? { ...p, status: 'admitted', bedId: availableBed.id } : p
     ));
 
@@ -204,16 +206,16 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
     const bed = beds.find(b => b.id === bedId);
     if (!bed || !bed.patientId) return;
 
-    setPatients(prev => prev.map(p => 
+    setPatients(prev => prev.map(p =>
       p.id === bed.patientId ? { ...p, status: 'discharged', bedId: undefined } : p
     ));
-    setBeds(prev => prev.map(b => 
+    setBeds(prev => prev.map(b =>
       b.id === bedId ? { ...b, status: 'available', patientId: undefined } : b
     ));
   }, [beds]);
 
   const updateBedStatus = useCallback((bedId: string, status: BedStatus) => {
-    setBeds(prev => prev.map(b => 
+    setBeds(prev => prev.map(b =>
       b.id === bedId ? { ...b, status } : b
     ));
   }, []);
@@ -230,7 +232,7 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
     };
 
     setPrescriptions(prev => [...prev, prescription]);
-    setPatients(prev => prev.map(p => 
+    setPatients(prev => prev.map(p =>
       p.id === patientId ? { ...p, prescription, status: 'pharmacy' } : p
     ));
 
@@ -250,14 +252,28 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
       return m;
     }));
 
-    setPrescriptions(prev => prev.map(p => 
+    setPrescriptions(prev => prev.map(p =>
       p.id === prescriptionId ? { ...p, dispensed: true } : p
     ));
 
-    setPatients(prev => prev.map(p => 
+    setPatients(prev => prev.map(p =>
       p.id === prescription.patientId ? { ...p, status: 'discharged' } : p
     ));
   }, [prescriptions]);
+
+  const addMedicine = useCallback((medicine: Omit<Medicine, 'id'>) => {
+    const newMedicine: Medicine = {
+      ...medicine,
+      id: `MED${Date.now()}`, // Simple ID generation
+    };
+    setMedicines(prev => [...prev, newMedicine]);
+  }, []);
+
+  const updateMedicineStock = useCallback((medicineId: string, newStock: number) => {
+    setMedicines(prev => prev.map(m =>
+      m.id === medicineId ? { ...m, stock: newStock } : m
+    ));
+  }, []);
 
   // Utilities
   const getWaitingTime = useCallback((patientId: string) => {
@@ -270,7 +286,7 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
     const position = doctor.queue.indexOf(patientId);
     if (position === -1) return 0;
 
-    const availableDoctorsCount = doctors.filter(d => 
+    const availableDoctorsCount = doctors.filter(d =>
       d.status === 'available' && d.specialization === doctor.specialization
     ).length || 1;
 
@@ -308,6 +324,8 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
       prescriptions,
       createPrescription,
       dispensePrescription,
+      addMedicine,
+      updateMedicineStock,
       getWaitingTime,
       getQueuePosition,
     }}>
