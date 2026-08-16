@@ -220,34 +220,34 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                   <div
                     key={patient.id}
                     className={cn(
-                      'flex items-center justify-between p-4 rounded-lg border transition-all',
+                      'flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-lg border transition-all min-w-0',
                       index === 0 ? 'bg-primary/5 border-primary/20' : 'bg-card',
                       patient.classification === 'emergency' && 'border-destructive/50'
                     )}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-start sm:items-center gap-3 min-w-0">
                       <div className={cn(
-                        'w-10 h-10 rounded-full flex items-center justify-center font-bold',
+                        'w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0',
                         index === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted'
                       )}>
                         {index + 1}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{patient.name}</span>
-                          <Badge variant="outline" className="font-mono">#{patient.tokenNumber}</Badge>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-medium truncate">{patient.name}</span>
+                          <Badge variant="outline" className="font-mono text-xs">#{patient.tokenNumber}</Badge>
                           {patient.classification === 'emergency' && (
-                            <Badge variant="destructive">Emergency</Badge>
+                            <Badge variant="destructive" className="text-xs">Emergency</Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {patient.age} yrs, {patient.gender} | {patient.symptoms.substring(0, 50)}...
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                          {patient.age} yrs, {patient.gender} | {patient.symptoms}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">~{getWaitingTime(patient.id)} min wait</p>
-                      <p className="text-xs text-muted-foreground">
+                    <div className="text-left sm:text-right shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0">
+                      <p className="text-xs sm:text-sm font-medium">~{getWaitingTime(patient.id)} min wait</p>
+                      <p className="text-[11px] sm:text-xs text-muted-foreground">
                         Registered: {new Date(patient.registeredAt).toLocaleTimeString()}
                       </p>
                     </div>
@@ -291,28 +291,28 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
             {/* Current Patient Info */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Stethoscope className="h-8 w-8 text-primary" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Stethoscope className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                     </div>
-                    <div>
-                      <CardTitle className="text-2xl">{currentPatient.name}</CardTitle>
-                      <CardDescription>
-                        Patient ID: {currentPatient.id} | Token: #{currentPatient.tokenNumber}
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-xl sm:text-2xl truncate">{currentPatient.name}</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">
+                        ID: {currentPatient.id} | Token: #{currentPatient.tokenNumber}
                       </CardDescription>
                     </div>
                   </div>
                   <Badge variant={
                     currentPatient.classification === 'emergency' ? 'destructive' :
                       currentPatient.classification === 'specialist' ? 'secondary' : 'default'
-                  } className="text-sm px-4 py-1">
+                  } className="text-xs sm:text-sm px-3 py-1 self-start sm:self-auto">
                     {currentPatient.classification.toUpperCase()}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-6">
                   <div className="p-3 rounded-lg bg-muted">
                     <p className="text-sm text-muted-foreground">Age</p>
                     <p className="text-lg font-semibold">{currentPatient.age} years</p>
