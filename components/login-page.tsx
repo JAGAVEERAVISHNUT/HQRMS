@@ -60,50 +60,50 @@ export function LoginPage() {
       {/* Background Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-accent/5 pointer-events-none z-0" />
 
-      <div className="w-full max-w-6xl relative z-10">
+      <div className="w-full max-w-6xl relative z-10 py-6">
         {/* Header */}
-        <div className="text-center mb-12 space-y-4">
-          <div className="flex items-center justify-center gap-3 mb-6 relative">
-            <div className="absolute inset-0 blur-3xl bg-primary/30 rounded-full w-24 h-24 mx-auto -z-10 animate-pulse" />
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 border border-white/10 backdrop-blur-md shadow-2xl shadow-primary/20">
-              <Activity className="h-12 w-12 text-primary animate-pulse" />
+        <div className="text-center mb-6 sm:mb-12 space-y-3 sm:space-y-4">
+          <div className="flex items-center justify-center gap-3 mb-4 sm:mb-6 relative">
+            <div className="absolute inset-0 blur-3xl bg-primary/30 rounded-full w-20 h-20 sm:w-24 sm:h-24 mx-auto -z-10 animate-pulse" />
+            <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 border border-white/10 backdrop-blur-md shadow-2xl shadow-primary/20">
+              <Activity className="h-8 w-8 sm:h-12 sm:w-12 text-primary animate-pulse" />
             </div>
           </div>
-          <h1 className="text-6xl md:text-7xl font-bold tracking-tight">
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-500 to-accent drop-shadow-sm">
               HQRMS
             </span>
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto font-light tracking-wide">
+          <p className="text-base sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto font-light tracking-wide px-2">
             Real-Time Predictive <span className="text-foreground font-medium">Hospital Operations</span> & <span className="text-foreground font-medium">City-Level Healthcare</span> Intelligence
           </p>
         </div>
 
         {/* Role Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-2 sm:px-4">
           {roles.map((roleItem) => (
             <Card
               key={roleItem.role}
-              className="relative overflow-hidden cursor-pointer group border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/30"
+              className="relative overflow-hidden cursor-pointer group border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 transition-all duration-300 hover:scale-[1.01] sm:hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/30"
               onClick={() => login(roleItem.role)}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-              <CardHeader className="pb-4 relative z-10">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 text-primary border border-white/10 group-hover:scale-110 group-hover:text-accent transition-all duration-300 shadow-inner">
+              <CardHeader className="pb-3 sm:pb-4 relative z-10">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 text-primary border border-white/10 group-hover:scale-110 group-hover:text-accent transition-all duration-300 shadow-inner">
                     {roleItem.icon}
                   </div>
-                  <CardTitle className="text-xl font-semibold tracking-tight text-foreground/90 group-hover:text-primary transition-colors">
+                  <CardTitle className="text-lg sm:text-xl font-semibold tracking-tight text-foreground/90 group-hover:text-primary transition-colors">
                     {roleItem.label}
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="relative z-10">
-                <CardDescription className="text-muted-foreground/80 text-base leading-relaxed group-hover:text-muted-foreground transition-colors">
+                <CardDescription className="text-muted-foreground/80 text-sm sm:text-base leading-relaxed group-hover:text-muted-foreground transition-colors">
                   {roleItem.description}
                 </CardDescription>
-                <div className="mt-6 flex items-center text-primary text-sm font-medium opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                <div className="mt-4 sm:mt-6 flex items-center text-primary text-xs sm:text-sm font-medium sm:opacity-0 sm:-translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
                   Access Portal <span className="ml-2">→</span>
                 </div>
               </CardContent>
@@ -112,8 +112,8 @@ export function LoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-12 text-center">
-          <p className="text-sm text-muted-foreground/60 uppercase tracking-widest font-medium">
+        <div className="mt-8 sm:mt-12 text-center">
+          <p className="text-xs sm:text-sm text-muted-foreground/60 uppercase tracking-widest font-medium">
             Secure Healthcare Intelligence Network
           </p>
         </div>

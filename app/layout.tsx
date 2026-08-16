@@ -11,7 +11,6 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: 'HQRMS - Hospital Operations & Healthcare Intelligence',
   description: 'Real-Time Predictive Hospital Operations & City-Level Healthcare Intelligence System',
-  generator: 'v0.app',
   icons: {
     icon: [
       {

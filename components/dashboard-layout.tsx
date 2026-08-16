@@ -1,7 +1,6 @@
 'use client';
 
-import React from "react"
-
+import React, { useState } from "react";
 import { useHospital } from '@/lib/hospital-context';
 import type { UserRole } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -19,9 +18,10 @@ import {
   ClipboardList,
   Package,
   AlertTriangle,
+  Menu,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
 
 interface NavItem {
   label: string;
@@ -76,6 +76,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { currentUser, logout, patients, beds, doctors } = useHospital();
   const [activeTab, setActiveTab] = useState(roleNavItems[currentUser?.role || 'admin'][0].id);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (!currentUser) return null;
 
@@ -87,12 +88,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const availableBeds = beds.filter(b => b.status === 'available').length;
   const availableDoctors = doctors.filter(d => d.status === 'available').length;
 
+  const handleNavClick = (id: string) => {
+    setActiveTab(id);
+    setIsMobileMenuOpen(false);
+  };
+
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col md:flex-row w-full overflow-x-hidden">
+      {/* Mobile Backdrop */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden transition-opacity"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar (Responsive Drawer on Mobile, Fixed Sidebar on Desktop) */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-72 bg-sidebar border-r border-sidebar-border flex flex-col transition-transform duration-300 ease-in-out md:static md:translate-x-0 md:w-64 shrink-0",
+          isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
+        )}
+      >
         {/* Logo */}
-        <div className="p-4 border-b border-sidebar-border">
+        <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-sidebar-primary/10">
               <Activity className="h-6 w-6 text-sidebar-primary" />
@@ -102,6 +121,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <p className="text-xs text-sidebar-foreground/60">Healthcare Intelligence</p>
             </div>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* User Info */}
@@ -118,14 +145,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-1">
             {navItems.map((item) => (
               <li key={item.id}>
                 <button
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleNavClick(item.id)}
                   className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                     activeTab === item.id
                       ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                       : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
@@ -166,7 +193,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <Button 
             variant="outline" 
             className="w-full bg-transparent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
-            onClick={logout}
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              logout();
+            }}
           >
             <LogOut className="h-4 w-4 mr-2" />
             Switch Role
@@ -175,30 +205,42 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col min-w-0 w-full overflow-x-hidden">
         {/* Top Bar */}
-        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
-          <div>
-            <h2 className="text-lg font-semibold text-card-foreground">
-              {navItems.find(item => item.id === activeTab)?.label}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {new Date().toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </p>
+        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-3 md:px-6 shrink-0">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden text-card-foreground hover:bg-muted"
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Open navigation menu"
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
+            <div>
+              <h2 className="text-base md:text-lg font-semibold text-card-foreground truncate">
+                {navItems.find(item => item.id === activeTab)?.label}
+              </h2>
+              <p className="text-xs text-muted-foreground hidden sm:block">
+                {new Date().toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
+
+          <div className="flex items-center gap-2 md:gap-4">
             {emergencyCount > 0 && (
-              <Badge variant="destructive" className="animate-pulse">
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                {emergencyCount} Emergency
+              <Badge variant="destructive" className="animate-pulse text-xs px-2 py-0.5">
+                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                <span>{emergencyCount} Emergency</span>
               </Badge>
             )}
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="text-xs px-2 py-0.5">
               Live
               <span className="ml-1 h-2 w-2 rounded-full bg-success animate-pulse inline-block" />
             </Badge>
@@ -206,10 +248,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 w-full max-w-full">
           {children(activeTab)}
         </div>
       </main>
     </div>
   );
 }
+

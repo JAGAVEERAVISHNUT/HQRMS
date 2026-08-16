@@ -119,12 +119,12 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
 
   if (activeTab === 'queue') {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-end mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">Viewing as:</span>
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-2 mb-4">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Viewing as:</span>
             <Select value={currentDoctor.id} onValueChange={setSelectedDoctorId}>
-              <SelectTrigger className="w-[280px]">
+              <SelectTrigger className="w-full sm:w-[280px]">
                 <SelectValue placeholder="Select Doctor" />
               </SelectTrigger>
               <SelectContent>
@@ -138,53 +138,53 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
           </div>
         </div>
         {/* Queue Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 In Queue
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{queuePatients.length}</div>
+              <div className="text-2xl sm:text-3xl font-bold">{queuePatients.length}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 Est. Clear Time
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">
+              <div className="text-2xl sm:text-3xl font-bold">
                 {queuePatients.length * currentDoctor.avgConsultationTime} min
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 Emergency
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-critical">
+              <div className="text-2xl sm:text-3xl font-bold text-critical">
                 {queuePatients.filter(p => p.classification === 'emergency').length}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <UserCheck className="h-4 w-4" />
                 Today Seen
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">
+              <div className="text-2xl sm:text-3xl font-bold">
                 {patients.filter(p =>
                   p.assignedDoctor === currentDoctor.id &&
                   ['pharmacy', 'admitted', 'discharged'].includes(p.status) &&
@@ -198,7 +198,7 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
         {/* Patient Queue */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <CardTitle>Patient Queue</CardTitle>
                 <CardDescription>Patients waiting for consultation</CardDescription>
@@ -206,6 +206,7 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
               <Button
                 onClick={handleCallNext}
                 disabled={queuePatients.length === 0 || currentPatient !== undefined}
+                className="w-full sm:w-auto"
               >
                 <UserCheck className="h-4 w-4 mr-2" />
                 Call Next Patient

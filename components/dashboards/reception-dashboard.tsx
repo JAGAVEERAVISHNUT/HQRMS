@@ -90,7 +90,7 @@ export function ReceptionDashboard({ activeTab }: { activeTab: string }) {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
                     <Input
@@ -116,7 +116,7 @@ export function ReceptionDashboard({ activeTab }: { activeTab: string }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="gender">Gender</Label>
                     <Select
@@ -246,7 +246,7 @@ export function ReceptionDashboard({ activeTab }: { activeTab: string }) {
     return (
       <div className="space-y-6">
         {/* Queue Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
