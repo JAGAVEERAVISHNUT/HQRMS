@@ -43,6 +43,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   doctor: [
     { label: 'My Queue', icon: <Users className="h-5 w-5" />, id: 'queue' },
     { label: 'Current Patient', icon: <Stethoscope className="h-5 w-5" />, id: 'patient' },
+    { label: 'Issued Prescriptions', icon: <Pill className="h-5 w-5" />, id: 'prescriptions' },
   ],
   pharmacy: [
     { label: 'Prescriptions', icon: <ClipboardList className="h-5 w-5" />, id: 'prescriptions' },
@@ -74,14 +75,15 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { currentUser, logout, patients, beds, doctors } = useHospital();
+  const { currentUser, logout, patients, beds, doctors, prescriptions } = useHospital();
   const [activeTab, setActiveTab] = useState(roleNavItems[currentUser?.role || 'admin'][0].id);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (!currentUser) return null;
 
   const navItems = roleNavItems[currentUser.role];
-  
+  const pendingPrescriptionsCount = prescriptions.filter(p => !p.dispensed).length;
+
   // Calculate real-time stats
   const waitingPatients = patients.filter(p => p.status === 'waiting').length;
   const emergencyCount = patients.filter(p => p.classification === 'emergency' && p.status !== 'discharged').length;
@@ -147,22 +149,34 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Navigation */}
         <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-1">
-            {navItems.map((item) => (
-              <li key={item.id}>
-                <button
-                  onClick={() => handleNavClick(item.id)}
-                  className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                    activeTab === item.id
-                      ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                      : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                  )}
-                >
-                  {item.icon}
-                  {item.label}
-                </button>
-              </li>
-            ))}
+            {navItems.map((item) => {
+              const isPrescriptionsTab = item.id === 'prescriptions';
+              const showBadge = isPrescriptionsTab && currentUser.role === 'pharmacy' && pendingPrescriptionsCount > 0;
+
+              return (
+                <li key={item.id}>
+                  <button
+                    onClick={() => handleNavClick(item.id)}
+                    className={cn(
+                      'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      activeTab === item.id
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                        : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </div>
+                    {showBadge && (
+                      <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-bold animate-pulse text-xs px-2 py-0.5">
+                        {pendingPrescriptionsCount}
+                      </Badge>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 

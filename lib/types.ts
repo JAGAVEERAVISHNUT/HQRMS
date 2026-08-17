@@ -67,15 +67,20 @@ export interface PrescriptionItem {
   medicineName: string;
   dosage: string;
   quantity: number;
+  instructions?: string;
 }
 
 export interface Prescription {
   id: string;
   patientId: string;
+  patientName?: string;
   doctorId: string;
+  doctorName?: string;
   items: PrescriptionItem[];
   issuedAt: Date;
   dispensed: boolean;
+  notes?: string;
+  dispensedAt?: Date;
 }
 
 // Analytics

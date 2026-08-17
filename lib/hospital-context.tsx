@@ -19,6 +19,7 @@ import {
   initialBeds,
   initialMedicines,
   initialPatients,
+  initialPrescriptions,
   generatePatientId,
   generatePrescriptionId,
   classifyPatient,
@@ -52,7 +53,7 @@ interface HospitalContextType {
   // Medicines & Prescriptions
   medicines: Medicine[];
   prescriptions: Prescription[];
-  createPrescription: (patientId: string, doctorId: string, items: Prescription['items']) => Prescription;
+  createPrescription: (patientId: string, doctorId: string, items: Prescription['items'], notes?: string) => Prescription;
   dispensePrescription: (prescriptionId: string) => void;
   addMedicine: (medicine: Omit<Medicine, 'id'>) => void;
   updateMedicineStock: (medicineId: string, newStock: number) => void;
@@ -72,7 +73,7 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
   const [doctors, setDoctors] = useState<Doctor[]>(initialDoctors);
   const [beds, setBeds] = useState<Bed[]>(initialBeds);
   const [medicines, setMedicines] = useState<Medicine[]>(initialMedicines);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>(initialPrescriptions);
 
   // Auth
   const login = useCallback((role: User['role']) => {
@@ -221,23 +222,29 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Pharmacy Operations
-  const createPrescription = useCallback((patientId: string, doctorId: string, items: Prescription['items']) => {
+  const createPrescription = useCallback((patientId: string, doctorId: string, items: Prescription['items'], notes?: string) => {
+    const patientName = patients.find(p => p.id === patientId)?.name;
+    const doctorName = doctors.find(d => d.id === doctorId)?.name;
+
     const prescription: Prescription = {
       id: generatePrescriptionId(),
       patientId,
+      patientName,
       doctorId,
+      doctorName,
       items,
       issuedAt: new Date(),
       dispensed: false,
+      notes,
     };
 
-    setPrescriptions(prev => [...prev, prescription]);
+    setPrescriptions(prev => [prescription, ...prev]);
     setPatients(prev => prev.map(p =>
       p.id === patientId ? { ...p, prescription, status: 'pharmacy' } : p
     ));
 
     return prescription;
-  }, []);
+  }, [patients, doctors]);
 
   const dispensePrescription = useCallback((prescriptionId: string) => {
     const prescription = prescriptions.find(p => p.id === prescriptionId);
@@ -253,7 +260,7 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
     }));
 
     setPrescriptions(prev => prev.map(p =>
-      p.id === prescriptionId ? { ...p, dispensed: true } : p
+      p.id === prescriptionId ? { ...p, dispensed: true, dispensedAt: new Date() } : p
     ));
 
     setPatients(prev => prev.map(p =>

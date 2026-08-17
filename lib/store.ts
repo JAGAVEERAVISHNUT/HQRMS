@@ -37,9 +37,10 @@ export const initialDoctors: Doctor[] = [
     id: 'D001',
     name: 'Dr. Smith',
     specialization: 'General Medicine',
-    status: 'available',
+    status: 'busy',
     avgConsultationTime: 15,
-    queue: [],
+    currentPatientId: 'P007',
+    queue: ['P006'],
   },
   {
     id: 'D002',
@@ -111,6 +112,24 @@ export const initialMedicines: Medicine[] = [
   { id: 'M010', name: 'Pantoprazole 40mg', stock: 180, unit: 'tablets', lowStockThreshold: 45 },
 ];
 
+// Initial Prescriptions
+export const initialPrescriptions: Prescription[] = [
+  {
+    id: 'RX00001',
+    patientId: 'P008',
+    patientName: 'David Miller',
+    doctorId: 'D001',
+    doctorName: 'Dr. Smith',
+    items: [
+      { medicineId: 'M001', medicineName: 'Paracetamol 500mg', dosage: '1 tablet twice daily', quantity: 10, instructions: 'Take after meals' },
+      { medicineId: 'M010', medicineName: 'Pantoprazole 40mg', dosage: '1 tablet once daily', quantity: 7, instructions: 'Before breakfast' },
+    ],
+    issuedAt: new Date(Date.now() - 1800000),
+    dispensed: false,
+    notes: 'Mild hypertension & gastritis. Monitor BP weekly.'
+  }
+];
+
 // Initial Patients (pre-existing)
 export const initialPatients: Patient[] = [
   {
@@ -172,6 +191,59 @@ export const initialPatients: Patient[] = [
     status: 'admitted',
     registeredAt: new Date(Date.now() - 43200000),
     bedId: 'B014',
+  },
+  {
+    id: 'P006',
+    name: 'Alex Turner',
+    age: 34,
+    gender: 'male',
+    mobile: '555-0106',
+    symptoms: 'Persistent fever and dry cough',
+    classification: 'general',
+    status: 'waiting',
+    registeredAt: new Date(Date.now() - 3600000),
+    assignedDoctor: 'D001',
+    tokenNumber: 101,
+  },
+  {
+    id: 'P007',
+    name: 'Sarah Jenkins',
+    age: 28,
+    gender: 'female',
+    mobile: '555-0107',
+    symptoms: 'Acute throat pain and acidity',
+    classification: 'general',
+    status: 'in-consultation',
+    registeredAt: new Date(Date.now() - 2400000),
+    assignedDoctor: 'D001',
+    tokenNumber: 102,
+  },
+  {
+    id: 'P008',
+    name: 'David Miller',
+    age: 50,
+    gender: 'male',
+    mobile: '555-0108',
+    symptoms: 'High BP and dizziness',
+    classification: 'general',
+    status: 'pharmacy',
+    registeredAt: new Date(Date.now() - 1800000),
+    assignedDoctor: 'D001',
+    tokenNumber: 103,
+    prescription: {
+      id: 'RX00001',
+      patientId: 'P008',
+      patientName: 'David Miller',
+      doctorId: 'D001',
+      doctorName: 'Dr. Smith',
+      items: [
+        { medicineId: 'M001', medicineName: 'Paracetamol 500mg', dosage: '1 tablet twice daily', quantity: 10, instructions: 'Take after meals' },
+        { medicineId: 'M010', medicineName: 'Pantoprazole 40mg', dosage: '1 tablet once daily', quantity: 7, instructions: 'Before breakfast' },
+      ],
+      issuedAt: new Date(Date.now() - 1800000),
+      dispensed: false,
+      notes: 'Mild hypertension & gastritis. Monitor BP weekly.'
+    }
   },
 ];
 
