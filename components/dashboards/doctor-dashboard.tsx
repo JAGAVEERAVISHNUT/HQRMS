@@ -45,7 +45,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { PrescriptionItem, Patient } from '@/lib/types';
 
-export function DoctorDashboard({ activeTab }: { activeTab: string }) {
+export function DoctorDashboard({ activeTab, onNavigateTab }: { activeTab: string; onNavigateTab?: (tab: string) => void }) {
   const {
     patients,
     doctors,
@@ -104,6 +104,12 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
     if (called) {
       setSuccessToast(`Now consulting ${called.name} (Token #${called.tokenNumber})`);
       setTimeout(() => setSuccessToast(null), 4000);
+      if (onNavigateTab) {
+        onNavigateTab('patient');
+      }
+    } else {
+      setSuccessToast('No waiting patients found for this doctor.');
+      setTimeout(() => setSuccessToast(null), 3000);
     }
   };
 
@@ -112,6 +118,9 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
     if (p) {
       setSuccessToast(`Now consulting ${p.name} (Token #${p.tokenNumber})`);
       setTimeout(() => setSuccessToast(null), 4000);
+      if (onNavigateTab) {
+        onNavigateTab('patient');
+      }
     }
   };
 
@@ -379,10 +388,21 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {onNavigateTab && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onNavigateTab('patient')}
+                        className="text-xs h-8"
+                      >
+                        <FileText className="h-3.5 w-3.5 mr-1" />
+                        Patient Details
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       onClick={() => openPrescribeModal(currentPatient)}
-                      className="bg-primary hover:bg-primary/90 text-xs w-full sm:w-auto"
+                      className="bg-primary hover:bg-primary/90 text-xs h-8 w-full sm:w-auto"
                     >
                       <Pill className="h-3.5 w-3.5 mr-1" /> Prescribe & Complete
                     </Button>
@@ -456,10 +476,28 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-emerald-500/70" />
-                  <p className="font-medium text-foreground">No patients waiting in queue</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    When reception registers a patient for this doctor, they appear here instantly.
-                  </p>
+                  <p className="font-medium text-foreground">No patients waiting in {currentDoctor.name}&apos;s queue</p>
+                  {doctors.filter(d => d.id !== currentDoctor.id && d.queue.length > 0).length > 0 ? (
+                    <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                      <p className="text-xs text-muted-foreground w-full">Patients waiting for other doctors:</p>
+                      {doctors.filter(d => d.id !== currentDoctor.id && d.queue.length > 0).map(doc => (
+                        <Button
+                          key={doc.id}
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedDoctorId(doc.id)}
+                          className="text-xs"
+                        >
+                          <Stethoscope className="h-3.5 w-3.5 mr-1 text-primary" />
+                          Switch to {doc.name} ({doc.queue.length} waiting)
+                        </Button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      When reception registers a patient for this doctor, they appear here instantly.
+                    </p>
+                  )}
                 </div>
               )}
             </CardContent>

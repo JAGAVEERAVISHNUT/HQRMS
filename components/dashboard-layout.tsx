@@ -82,7 +82,7 @@ const roleLabels: Record<UserRole, string> = {
 const rolesList: UserRole[] = ['reception', 'doctor', 'pharmacy', 'admin', 'city'];
 
 interface DashboardLayoutProps {
-  children: (activeTab: string) => React.ReactNode;
+  children: (activeTab: string, setActiveTab: (tab: string) => void) => React.ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -389,7 +389,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-6 w-full max-w-full">
-          {children(activeTab)}
+          {children(activeTab, setActiveTab)}
         </div>
       </main>
     </div>

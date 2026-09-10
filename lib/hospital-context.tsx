@@ -442,14 +442,41 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
 
   const callNextPatient = useCallback((doctorId: string, targetPatientId?: string): Patient | null => {
     const doctor = doctors.find(d => d.id === doctorId);
-    if (!doctor || doctor.queue.length === 0) return null;
+    if (!doctor) return null;
 
-    const nextPatientId = targetPatientId || doctor.queue[0];
-    const patient = patients.find(p => p.id === nextPatientId);
-    if (!patient) return null;
+    // 1. Locate the patient to consult:
+    let nextPatient: Patient | undefined;
 
-    // Remove called patient from queue
-    const updatedQueue = doctor.queue.filter(id => id !== nextPatientId);
+    if (targetPatientId) {
+      nextPatient = patients.find(p => p.id === targetPatientId);
+    } else {
+      // First look in doctor's queue for a patient that is actually waiting
+      for (const qId of doctor.queue) {
+        const p = patients.find(pt => pt.id === qId && pt.status === 'waiting');
+        if (p) {
+          nextPatient = p;
+          break;
+        }
+      }
+      // If not found in queue array, find any patient assigned to this doctor who is waiting
+      if (!nextPatient) {
+        nextPatient = patients.find(p => p.assignedDoctor === doctorId && p.status === 'waiting');
+      }
+    }
+
+    if (!nextPatient) return null;
+
+    const nextPatientId = nextPatient.id;
+    const previousPatientId = doctor.currentPatientId;
+
+    // Update doctor queue: remove called patient
+    let updatedQueue = doctor.queue.filter(id => id !== nextPatientId);
+    if (previousPatientId && previousPatientId !== nextPatientId) {
+      const prevPatient = patients.find(p => p.id === previousPatientId);
+      if (prevPatient && prevPatient.status === 'in-consultation' && !updatedQueue.includes(previousPatientId)) {
+        updatedQueue = [previousPatientId, ...updatedQueue];
+      }
+    }
 
     const updatedDoctors = doctors.map(d =>
       d.id === doctorId
@@ -458,12 +485,12 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
     );
 
     const updatedPatients = patients.map(p => {
-      // If there was a previous patient in consultation with this doctor that wasn't finished, keep them safe
-      if (doctor.currentPatientId && p.id === doctor.currentPatientId && p.id !== nextPatientId && p.status === 'in-consultation') {
+      // Previous unfinished patient moved back to waiting
+      if (previousPatientId && p.id === previousPatientId && p.id !== nextPatientId && p.status === 'in-consultation') {
         return { ...p, status: 'waiting' as PatientStatus };
       }
       if (p.id === nextPatientId) {
-        return { ...p, status: 'in-consultation' as PatientStatus };
+        return { ...p, status: 'in-consultation' as PatientStatus, assignedDoctor: doctorId };
       }
       return p;
     });
@@ -477,7 +504,7 @@ export function HospitalProvider({ children }: { children: ReactNode }) {
       doctors: updatedDoctors,
     });
 
-    return patient;
+    return nextPatient;
   }, [doctors, patients, broadcastSync]);
 
   const completeConsultation = useCallback((

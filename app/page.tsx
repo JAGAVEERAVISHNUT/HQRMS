@@ -18,12 +18,12 @@ export default function Home() {
 
   return (
     <DashboardLayout>
-      {(activeTab) => {
+      {(activeTab, setActiveTab) => {
         switch (currentUser.role) {
           case 'reception':
             return <ReceptionDashboard activeTab={activeTab} />;
           case 'doctor':
-            return <DoctorDashboard activeTab={activeTab} />;
+            return <DoctorDashboard activeTab={activeTab} onNavigateTab={setActiveTab} />;
           case 'admin':
             return <AdminDashboard activeTab={activeTab} />;
           case 'pharmacy':
