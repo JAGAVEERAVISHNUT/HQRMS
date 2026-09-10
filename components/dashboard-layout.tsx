@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from 'react';
 import { useHospital } from '@/lib/hospital-context';
 import type { UserRole } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -20,8 +20,17 @@ import {
   AlertTriangle,
   Menu,
   X,
+  RotateCcw,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface NavItem {
   label: string;
@@ -55,33 +64,59 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
 };
 
 const roleIcons: Record<UserRole, React.ReactNode> = {
-  admin: <UserCog className="h-5 w-5" />,
-  reception: <Users className="h-5 w-5" />,
-  doctor: <Stethoscope className="h-5 w-5" />,
-  pharmacy: <Pill className="h-5 w-5" />,
-  city: <Building2 className="h-5 w-5" />,
+  admin: <UserCog className="h-4 w-4" />,
+  reception: <Users className="h-4 w-4" />,
+  doctor: <Stethoscope className="h-4 w-4" />,
+  pharmacy: <Pill className="h-4 w-4" />,
+  city: <Building2 className="h-4 w-4" />,
 };
 
 const roleLabels: Record<UserRole, string> = {
   admin: 'Hospital Admin',
   reception: 'Reception / OPD',
-  doctor: 'Doctor',
-  pharmacy: 'Pharmacy',
+  doctor: 'Doctor Panel',
+  pharmacy: 'Pharmacy Staff',
   city: 'City Authority',
 };
+
+const rolesList: UserRole[] = ['reception', 'doctor', 'pharmacy', 'admin', 'city'];
 
 interface DashboardLayoutProps {
   children: (activeTab: string) => React.ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { currentUser, logout, patients, beds, doctors, prescriptions } = useHospital();
-  const [activeTab, setActiveTab] = useState(roleNavItems[currentUser?.role || 'admin'][0].id);
+  const {
+    currentUser,
+    login,
+    logout,
+    patients,
+    beds,
+    doctors,
+    prescriptions,
+    resetToInitialData,
+  } = useHospital();
+
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const role = currentUser?.role || 'reception';
+    return roleNavItems[role]?.[0]?.id || 'registration';
+  });
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Synchronize activeTab whenever currentUser role changes
+  useEffect(() => {
+    if (currentUser?.role) {
+      const validTabs = roleNavItems[currentUser.role];
+      if (validTabs && !validTabs.some(t => t.id === activeTab)) {
+        setActiveTab(validTabs[0].id);
+      }
+    }
+  }, [currentUser?.role, activeTab]);
 
   if (!currentUser) return null;
 
-  const navItems = roleNavItems[currentUser.role];
+  const navItems = roleNavItems[currentUser.role] || roleNavItems.reception;
   const pendingPrescriptionsCount = prescriptions.filter(p => !p.dispensed).length;
 
   // Calculate real-time stats
@@ -92,6 +127,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleNavClick = (id: string) => {
     setActiveTab(id);
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleQuickRoleSwitch = (role: UserRole) => {
+    login(role);
+    const validTabs = roleNavItems[role];
+    if (validTabs && validTabs.length > 0) {
+      setActiveTab(validTabs[0].id);
+    }
     setIsMobileMenuOpen(false);
   };
 
@@ -114,13 +158,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         {/* Logo */}
         <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-lg bg-sidebar-primary/10">
-              <Activity className="h-6 w-6 text-sidebar-primary" />
+              <Activity className="h-5 w-5 text-sidebar-primary" />
             </div>
             <div>
-              <h1 className="font-bold text-sidebar-foreground">HQRMS</h1>
-              <p className="text-xs text-sidebar-foreground/60">Healthcare Intelligence</p>
+              <h1 className="font-bold text-sm tracking-tight text-sidebar-foreground">HQRMS</h1>
+              <p className="text-[11px] text-sidebar-foreground/60">Hospital Intelligence</p>
             </div>
           </div>
           <Button
@@ -133,21 +177,42 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </Button>
         </div>
 
-        {/* User Info */}
-        <div className="p-4 border-b border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-sidebar-accent text-sidebar-accent-foreground">
-              {roleIcons[currentUser.role]}
+        {/* User Info & Role Dropdown */}
+        <div className="p-3.5 border-b border-sidebar-border">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="p-2 rounded-lg bg-sidebar-accent text-sidebar-accent-foreground shrink-0">
+                {roleIcons[currentUser.role]}
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-xs text-sidebar-foreground truncate">{currentUser.name}</p>
+                <p className="text-[11px] text-sidebar-foreground/60 truncate">{roleLabels[currentUser.role]}</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sidebar-foreground truncate">{currentUser.name}</p>
-              <p className="text-xs text-sidebar-foreground/60">{roleLabels[currentUser.role]}</p>
-            </div>
+
+            {/* Quick Switch Dropdown */}
+            <Select value={currentUser.role} onValueChange={(val) => handleQuickRoleSwitch(val as UserRole)}>
+              <SelectTrigger className="h-7 text-[11px] w-28 bg-background/50 border-sidebar-border text-sidebar-foreground">
+                <SelectValue placeholder="Role" />
+              </SelectTrigger>
+              <SelectContent align="end" className="text-xs">
+                {rolesList.map(role => (
+                  <SelectItem key={role} value={role} className="text-xs">
+                    <span className="flex items-center gap-1.5">
+                      {roleLabels[role]}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
+        <nav className="flex-1 p-3 overflow-y-auto">
+          <p className="text-[10px] uppercase font-bold tracking-wider text-sidebar-foreground/40 px-3 mb-2">
+            {roleLabels[currentUser.role]} Navigation
+          </p>
           <ul className="space-y-1">
             {navItems.map((item) => {
               const isPrescriptionsTab = item.id === 'prescriptions';
@@ -158,19 +223,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <button
                     onClick={() => handleNavClick(item.id)}
                     className={cn(
-                      'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      'w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors',
                       activeTab === item.id
-                        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-2xs'
                         : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                     )}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
                       {item.icon}
                       <span>{item.label}</span>
                     </div>
                     {showBadge && (
-                      <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-bold animate-pulse text-xs px-2 py-0.5">
-                        {pendingPrescriptionsCount}
+                      <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-bold animate-pulse text-[10px] px-1.5 py-0">
+                        {pendingPrescriptionsCount} new
                       </Badge>
                     )}
                   </button>
@@ -181,39 +246,61 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         {/* Quick Stats */}
-        <div className="p-4 border-t border-sidebar-border">
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="p-2 rounded-lg bg-sidebar-accent">
-              <p className="text-sidebar-foreground/60">Waiting</p>
+        <div className="p-3 border-t border-sidebar-border">
+          <p className="text-[10px] uppercase font-bold tracking-wider text-sidebar-foreground/40 px-1 mb-2">
+            Hospital Vitals
+          </p>
+          <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+            <div className="p-2 rounded-md bg-sidebar-accent/50 border border-sidebar-border/40">
+              <p className="text-sidebar-foreground/60 text-[10px]">Waiting OPD</p>
               <p className="font-bold text-sidebar-foreground">{waitingPatients}</p>
             </div>
-            <div className="p-2 rounded-lg bg-sidebar-accent">
-              <p className="text-sidebar-foreground/60">Emergency</p>
-              <p className="font-bold text-critical">{emergencyCount}</p>
+            <div className="p-2 rounded-md bg-sidebar-accent/50 border border-sidebar-border/40">
+              <p className="text-sidebar-foreground/60 text-[10px]">Emergency</p>
+              <p className={cn("font-bold", emergencyCount > 0 ? "text-rose-500" : "text-sidebar-foreground")}>
+                {emergencyCount}
+              </p>
             </div>
-            <div className="p-2 rounded-lg bg-sidebar-accent">
-              <p className="text-sidebar-foreground/60">Beds</p>
-              <p className="font-bold text-success">{availableBeds}</p>
+            <div className="p-2 rounded-md bg-sidebar-accent/50 border border-sidebar-border/40">
+              <p className="text-sidebar-foreground/60 text-[10px]">Beds Free</p>
+              <p className="font-bold text-emerald-500">{availableBeds}</p>
             </div>
-            <div className="p-2 rounded-lg bg-sidebar-accent">
-              <p className="text-sidebar-foreground/60">Doctors</p>
-              <p className="font-bold text-sidebar-foreground">{availableDoctors}</p>
+            <div className="p-2 rounded-md bg-sidebar-accent/50 border border-sidebar-border/40">
+              <p className="text-sidebar-foreground/60 text-[10px]">Rx Pending</p>
+              <p className={cn("font-bold", pendingPrescriptionsCount > 0 ? "text-amber-500" : "text-sidebar-foreground")}>
+                {pendingPrescriptionsCount}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Logout */}
-        <div className="p-4 border-t border-sidebar-border">
-          <Button 
-            variant="outline" 
-            className="w-full bg-transparent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
+        {/* Footer Actions */}
+        <div className="p-3 border-t border-sidebar-border space-y-1.5">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="w-full text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground justify-start h-8"
+            onClick={() => {
+              if (window.confirm('Reset all demo patient and prescription data to initial state?')) {
+                resetToInitialData();
+              }
+            }}
+          >
+            <RotateCcw className="h-3.5 w-3.5 mr-2" />
+            Reset Demo Data
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full bg-transparent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent justify-start h-8 text-xs"
             onClick={() => {
               setIsMobileMenuOpen(false);
               logout();
             }}
           >
-            <LogOut className="h-4 w-4 mr-2" />
-            Switch Role
+            <LogOut className="h-3.5 w-3.5 mr-2" />
+            Log Out
           </Button>
         </div>
       </aside>
@@ -221,42 +308,81 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 w-full overflow-x-hidden">
         {/* Top Bar */}
-        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-3 md:px-6 shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-3 md:px-6 shrink-0 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden text-card-foreground hover:bg-muted"
+              className="md:hidden text-card-foreground hover:bg-muted shrink-0"
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Open navigation menu"
             >
-              <Menu className="h-6 w-6" />
+              <Menu className="h-5 w-5" />
             </Button>
-            <div>
-              <h2 className="text-base md:text-lg font-semibold text-card-foreground truncate">
-                {navItems.find(item => item.id === activeTab)?.label}
-              </h2>
-              <p className="text-xs text-muted-foreground hidden sm:block">
-                {new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-card-foreground truncate">
+                  {navItems.find(item => item.id === activeTab)?.label || 'Dashboard'}
+                </h2>
+                <Badge variant="outline" className="text-[10px] hidden sm:inline-flex">
+                  {roleLabels[currentUser.role]}
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground hidden sm:block">
+                HQRMS Live Synchronized Clinical Workspace
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-4">
+          {/* Role Pill Switcher Bar */}
+          <div className="hidden lg:flex items-center bg-muted/60 p-1 rounded-lg border text-xs gap-1">
+            {rolesList.map(role => {
+              const isActive = currentUser.role === role;
+              return (
+                <button
+                  key={role}
+                  onClick={() => handleQuickRoleSwitch(role)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1.5',
+                    isActive
+                      ? 'bg-background text-foreground shadow-2xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/40'
+                  )}
+                >
+                  {roleIcons[role]}
+                  <span className="capitalize">{role}</span>
+                  {role === 'pharmacy' && pendingPrescriptionsCount > 0 && (
+                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right Status */}
+          <div className="flex items-center gap-2 shrink-0">
             {emergencyCount > 0 && (
-              <Badge variant="destructive" className="animate-pulse text-xs px-2 py-0.5">
-                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+              <Badge variant="destructive" className="animate-pulse text-[11px] px-2 py-0.5">
+                <AlertTriangle className="h-3 w-3 mr-1" />
                 <span>{emergencyCount} Emergency</span>
               </Badge>
             )}
-            <Badge variant="secondary" className="text-xs px-2 py-0.5">
-              Live
-              <span className="ml-1 h-2 w-2 rounded-full bg-success animate-pulse inline-block" />
+
+            {pendingPrescriptionsCount > 0 && currentUser.role !== 'pharmacy' && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleQuickRoleSwitch('pharmacy')}
+                className="h-7 text-[11px] border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20"
+              >
+                <Pill className="h-3 w-3 mr-1 text-amber-500" />
+                {pendingPrescriptionsCount} Rx Ready
+              </Button>
+            )}
+
+            <Badge variant="secondary" className="text-[11px] px-2 py-0.5">
+              Sync Active
+              <span className="ml-1 h-2 w-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
             </Badge>
           </div>
         </header>
@@ -269,4 +395,3 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     </div>
   );
 }
-

@@ -86,13 +86,19 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
     }
   };
 
-  const pendingPrescriptions = prescriptions.filter(p => !p.dispensed);
+  const pendingPrescriptions = [...prescriptions]
+    .filter(p => !p.dispensed)
+    .sort((a, b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime());
   const dispensedToday = prescriptions.filter(
     p => p.dispensed && (
       !p.dispensedAt || new Date(p.dispensedAt).toDateString() === new Date().toDateString() ||
       new Date(p.issuedAt).toDateString() === new Date().toDateString()
     )
-  );
+  ).sort((a, b) => {
+    const timeA = a.dispensedAt ? new Date(a.dispensedAt).getTime() : new Date(a.issuedAt).getTime();
+    const timeB = b.dispensedAt ? new Date(b.dispensedAt).getTime() : new Date(b.issuedAt).getTime();
+    return timeB - timeA;
+  });
   const lowStockMedicines = medicines.filter(m => m.stock <= m.lowStockThreshold);
 
   const filteredMedicines = medicines.filter(m =>
@@ -126,7 +132,7 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
                 <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <p className="text-sm font-medium">{dispenseToast}</p>
               </div>
-              <Button size="xs" variant="ghost" onClick={() => setDispenseToast(null)} className="h-7 text-xs">
+              <Button size="sm" variant="ghost" onClick={() => setDispenseToast(null)} className="h-7 text-xs">
                 Dismiss
               </Button>
             </div>
@@ -404,7 +410,7 @@ export function PharmacyDashboard({ activeTab }: { activeTab: string }) {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button size="xs" variant="ghost" onClick={() => setSelectedRx(prescription)}>
+                            <Button size="sm" variant="ghost" onClick={() => setSelectedRx(prescription)} className="h-7 text-xs">
                               <Eye className="h-3.5 w-3.5 mr-1" /> View Slip
                             </Button>
                           </TableCell>

@@ -26,6 +26,7 @@ export interface Patient {
   tokenNumber?: number;
   prescription?: Prescription;
   bedId?: string;
+  department?: string;
 }
 
 // Doctor types

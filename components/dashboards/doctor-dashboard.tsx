@@ -22,7 +22,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
@@ -56,7 +55,8 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
     completeConsultation,
     createPrescription,
     admitPatient,
-    getWaitingTime
+    updatePatientStatus,
+    getWaitingTime,
   } = useHospital();
 
   // Allow switching doctors for demo purposes
@@ -68,7 +68,7 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
   const [prescriptionNotes, setPrescriptionNotes] = useState<string>('');
   const [showPrescriptionDialog, setShowPrescriptionDialog] = useState(false);
   const [targetPatient, setTargetPatient] = useState<Patient | null>(null);
-  
+
   // Custom Medicine Input state
   const [medSearch, setMedSearch] = useState('');
   const [customMedName, setCustomMedName] = useState('');
@@ -77,25 +77,42 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
   const [customInstructions, setCustomInstructions] = useState('');
   const [showCustomMed, setShowCustomMed] = useState(false);
 
-  // Admission & Toast state
+  // Admission, Referral & Toast state
   const [showAdmitDialog, setShowAdmitDialog] = useState(false);
   const [selectedBedType, setSelectedBedType] = useState<'general' | 'icu' | 'emergency'>('general');
+  const [showReferDialog, setShowReferDialog] = useState(false);
+  const [selectedReferralDoctorId, setSelectedReferralDoctorId] = useState<string>('');
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [prescriptionSearch, setPrescriptionSearch] = useState('');
+  const [showAllPrescriptions, setShowAllPrescriptions] = useState(false);
 
   const queuePatients = patients.filter(
     p => p.assignedDoctor === currentDoctor.id && p.status === 'waiting'
   );
+
   const currentPatient = patients.find(
-    p => p.assignedDoctor === currentDoctor.id && p.status === 'in-consultation'
+    p => p.id === currentDoctor.currentPatientId ||
+      (p.assignedDoctor === currentDoctor.id && p.status === 'in-consultation')
   );
 
-  const doctorPrescriptions = prescriptions.filter(
-    p => p.doctorId === currentDoctor.id
-  );
+  const displayedPrescriptions = showAllPrescriptions
+    ? prescriptions
+    : prescriptions.filter(p => p.doctorId === currentDoctor.id);
 
   const handleCallNext = () => {
-    callNextPatient(currentDoctor.id);
+    const called = callNextPatient(currentDoctor.id);
+    if (called) {
+      setSuccessToast(`Now consulting ${called.name} (Token #${called.tokenNumber})`);
+      setTimeout(() => setSuccessToast(null), 4000);
+    }
+  };
+
+  const handleConsultSpecificPatient = (patientId: string) => {
+    const p = callNextPatient(currentDoctor.id, patientId);
+    if (p) {
+      setSuccessToast(`Now consulting ${p.name} (Token #${p.tokenNumber})`);
+      setTimeout(() => setSuccessToast(null), 4000);
+    }
   };
 
   const openPrescribeModal = (patient: Patient) => {
@@ -113,14 +130,14 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
         medicineName: medicine.name,
         dosage: '1 tablet twice daily after meals',
         quantity: 10,
-        instructions: 'Take with plenty of water',
+        instructions: 'Take after meals',
       }]);
     }
   };
 
   const handleAddCustomMedicine = () => {
     if (!customMedName.trim()) return;
-    const newId = `CUSTOM_${Date.now()}`;
+    const newId = `CUSTOM_${Date.now().toString().slice(-4)}`;
     setPrescriptionItems(prev => [...prev, {
       medicineId: newId,
       medicineName: customMedName.trim(),
@@ -166,12 +183,8 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
         prescriptionItems,
         prescriptionNotes
       );
-      
-      if (currentPatient && currentPatient.id === patientToPrescribe.id) {
-        completeConsultation(currentDoctor.id, 'prescribe');
-      }
 
-      setSuccessToast(`Prescription #${rx.id} successfully created and sent to Pharmacy Staff Dashboard!`);
+      setSuccessToast(`Prescription #${rx.id} issued & dispatched to Pharmacy Staff Dashboard!`);
       setTimeout(() => setSuccessToast(null), 6000);
 
       setPrescriptionItems([]);
@@ -184,10 +197,29 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
   const handleAdmit = () => {
     if (currentPatient) {
       admitPatient(currentPatient.id, selectedBedType);
-      completeConsultation(currentDoctor.id, 'admit');
       setShowAdmitDialog(false);
       setSuccessToast(`Patient ${currentPatient.name} admitted to ${selectedBedType.toUpperCase()} ward.`);
       setTimeout(() => setSuccessToast(null), 5000);
+    }
+  };
+
+  const handleReferralSubmit = () => {
+    if (currentPatient && selectedReferralDoctorId) {
+      const refDoctor = doctors.find(d => d.id === selectedReferralDoctorId);
+      completeConsultation(currentDoctor.id, 'refer', selectedReferralDoctorId);
+      setShowReferDialog(false);
+      setSuccessToast(`Patient ${currentPatient.name} transferred to ${refDoctor?.name || 'Specialist'}.`);
+      setTimeout(() => setSuccessToast(null), 5000);
+      setSelectedReferralDoctorId('');
+    }
+  };
+
+  const handleDischargeWithoutPrescription = () => {
+    if (currentPatient) {
+      updatePatientStatus(currentPatient.id, 'discharged');
+      completeConsultation(currentDoctor.id, 'prescribe');
+      setSuccessToast(`Patient ${currentPatient.name} marked healthy and discharged.`);
+      setTimeout(() => setSuccessToast(null), 4000);
     }
   };
 
@@ -195,12 +227,13 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
     m.name.toLowerCase().includes(medSearch.toLowerCase())
   );
 
-  const filteredDoctorPrescriptions = doctorPrescriptions.filter(p => {
+  const filteredDoctorPrescriptions = displayedPrescriptions.filter(p => {
     const q = prescriptionSearch.toLowerCase();
     return (
       p.id.toLowerCase().includes(q) ||
       (p.patientName && p.patientName.toLowerCase().includes(q)) ||
       p.patientId.toLowerCase().includes(q) ||
+      (p.doctorName && p.doctorName.toLowerCase().includes(q)) ||
       p.items.some(i => i.medicineName.toLowerCase().includes(q))
     );
   });
@@ -209,12 +242,12 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
     <div className="space-y-4 sm:space-y-6">
       {/* Toast Banner */}
       {successToast && (
-        <div className="p-4 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="p-4 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <p className="text-sm font-medium">{successToast}</p>
           </div>
-          <Button size="xs" variant="ghost" onClick={() => setSuccessToast(null)} className="h-7 text-xs">
+          <Button size="sm" variant="ghost" onClick={() => setSuccessToast(null)} className="h-7 text-xs">
             Dismiss
           </Button>
         </div>
@@ -224,18 +257,23 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-card p-3.5 rounded-lg border shadow-xs">
         <div className="flex items-center gap-2">
           <Stethoscope className="h-5 w-5 text-primary" />
-          <span className="font-semibold text-sm">Consultation Panel</span>
+          <div>
+            <span className="font-semibold text-sm">Consultation Panel</span>
+            <span className="text-xs text-muted-foreground ml-2">
+              ({queuePatients.length} patient{queuePatients.length !== 1 ? 's' : ''} waiting in queue)
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Viewing as:</span>
+          <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Doctor Profile:</span>
           <Select value={currentDoctor.id} onValueChange={setSelectedDoctorId}>
-            <SelectTrigger className="w-full sm:w-[280px]">
+            <SelectTrigger className="w-full sm:w-[320px]">
               <SelectValue placeholder="Select Doctor" />
             </SelectTrigger>
             <SelectContent>
               {doctors.map((doctor) => (
                 <SelectItem key={doctor.id} value={doctor.id}>
-                  {doctor.name} ({doctor.specialization})
+                  {doctor.name} &bull; {doctor.specialization} ({doctor.queue.length} in queue)
                 </SelectItem>
               ))}
             </SelectContent>
@@ -288,7 +326,7 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <UserCheck className="h-4 w-4" />
-                  Today Seen
+                  Completed Today
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -307,75 +345,121 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
             <CardHeader>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
-                  <CardTitle>Patient Queue ({queuePatients.length})</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    Patient Queue ({queuePatients.length})
+                  </CardTitle>
                   <CardDescription>Patients waiting for consultation with {currentDoctor.name}</CardDescription>
                 </div>
-                <Button
-                  onClick={handleCallNext}
-                  disabled={queuePatients.length === 0 || currentPatient !== undefined}
-                  className="w-full sm:w-auto"
-                >
-                  <UserCheck className="h-4 w-4 mr-2" />
-                  Call Next Patient
-                </Button>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button
+                    onClick={handleCallNext}
+                    disabled={queuePatients.length === 0}
+                    className="w-full sm:w-auto bg-primary hover:bg-primary/90"
+                  >
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Call Next Patient
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
+              {/* Active consultation indicator if any */}
+              {currentPatient && (
+                <div className="mb-4 p-3.5 rounded-lg bg-primary/10 border border-primary/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-primary/20">
+                      <Stethoscope className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Currently in Consultation</p>
+                      <p className="font-semibold text-sm text-foreground">
+                        {currentPatient.name} &bull; Token #{currentPatient.tokenNumber} ({currentPatient.age} yrs, {currentPatient.gender})
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button
+                      size="sm"
+                      onClick={() => openPrescribeModal(currentPatient)}
+                      className="bg-primary hover:bg-primary/90 text-xs w-full sm:w-auto"
+                    >
+                      <Pill className="h-3.5 w-3.5 mr-1" /> Prescribe & Complete
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {queuePatients.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {queuePatients.map((patient, index) => (
                     <div
                       key={patient.id}
                       className={cn(
-                        'flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-lg border transition-all min-w-0',
-                        index === 0 ? 'bg-primary/5 border-primary/20' : 'bg-card',
-                        patient.classification === 'emergency' && 'border-destructive/50'
+                        'flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-lg border transition-all',
+                        index === 0 ? 'bg-primary/5 border-primary/25 shadow-2xs' : 'bg-card',
+                        patient.classification === 'emergency' && 'border-destructive/50 bg-destructive/5'
                       )}
                     >
                       <div className="flex items-start sm:items-center gap-3 min-w-0">
                         <div className={cn(
-                          'w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0',
-                          index === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                          'w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0',
+                          index === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                         )}>
-                          {index + 1}
+                          #{index + 1}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-medium truncate">{patient.name}</span>
-                            <Badge variant="outline" className="font-mono text-xs">#{patient.tokenNumber}</Badge>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-sm text-foreground">{patient.name}</span>
+                            <Badge variant="outline" className="font-mono text-xs">Token #{patient.tokenNumber}</Badge>
                             {patient.classification === 'emergency' && (
                               <Badge variant="destructive" className="text-xs">Emergency</Badge>
                             )}
                           </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                            {patient.age} yrs, {patient.gender} | {patient.symptoms}
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {patient.age} yrs, {patient.gender} &bull; <span className="text-foreground/80">{patient.symptoms}</span>
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-left sm:text-right shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0">
+
+                      <div className="flex items-center gap-2 text-left sm:text-right shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 justify-between sm:justify-end">
                         <div>
-                          <p className="text-xs sm:text-sm font-medium">~{getWaitingTime(patient.id)} min wait</p>
-                          <p className="text-[11px] sm:text-xs text-muted-foreground">
-                            Registered: {new Date(patient.registeredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          <p className="text-xs font-semibold text-foreground">~{getWaitingTime(patient.id)} min wait</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {new Date(patient.registeredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openPrescribeModal(patient)}
-                          className="ml-2"
-                        >
-                          <Pill className="h-3.5 w-3.5 mr-1 text-primary" />
-                          Prescribe
-                        </Button>
+
+                        <div className="flex items-center gap-1.5 ml-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleConsultSpecificPatient(patient.id)}
+                            className="text-xs h-8"
+                          >
+                            <Stethoscope className="h-3.5 w-3.5 mr-1" />
+                            Consult
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openPrescribeModal(patient)}
+                            className="text-xs h-8"
+                          >
+                            <Pill className="h-3.5 w-3.5 mr-1 text-primary" />
+                            Prescribe
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No patients currently waiting in queue</p>
+                  <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-emerald-500/70" />
+                  <p className="font-medium text-foreground">No patients waiting in queue</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    When reception registers a patient for this doctor, they appear here instantly.
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -392,13 +476,13 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Stethoscope className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                      <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Stethoscope className="h-7 w-7 text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <CardTitle className="text-xl sm:text-2xl truncate">{currentPatient.name}</CardTitle>
                         <CardDescription className="text-xs sm:text-sm">
-                          Patient ID: {currentPatient.id} | Token: #{currentPatient.tokenNumber}
+                          Patient ID: {currentPatient.id} &bull; Token: #{currentPatient.tokenNumber}
                         </CardDescription>
                       </div>
                     </div>
@@ -412,19 +496,19 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-6">
-                    <div className="p-3 rounded-lg bg-muted">
+                    <div className="p-3 rounded-lg bg-muted/60 border">
                       <p className="text-xs text-muted-foreground">Age</p>
                       <p className="text-base sm:text-lg font-semibold">{currentPatient.age} years</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-muted">
+                    <div className="p-3 rounded-lg bg-muted/60 border">
                       <p className="text-xs text-muted-foreground">Gender</p>
                       <p className="text-base sm:text-lg font-semibold capitalize">{currentPatient.gender}</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-muted">
+                    <div className="p-3 rounded-lg bg-muted/60 border">
                       <p className="text-xs text-muted-foreground">Mobile</p>
                       <p className="text-base sm:text-lg font-semibold">{currentPatient.mobile}</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-muted">
+                    <div className="p-3 rounded-lg bg-muted/60 border">
                       <p className="text-xs text-muted-foreground">Registered</p>
                       <p className="text-base sm:text-lg font-semibold">
                         {new Date(currentPatient.registeredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -432,8 +516,8 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-lg bg-muted/50 border">
-                    <h4 className="font-medium mb-1 text-sm flex items-center gap-2">
+                  <div className="p-4 rounded-lg bg-muted/40 border">
+                    <h4 className="font-semibold mb-1 text-sm flex items-center gap-2">
                       <FileText className="h-4 w-4 text-primary" />
                       Symptoms & Chief Complaints
                     </h4>
@@ -449,42 +533,49 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                   <CardDescription>Issue prescription or direct patient workflow</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Prescribe Action Button */}
                     <Button
-                      className="h-auto py-6 flex-col gap-2 bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary hover:text-primary"
+                      className="h-auto py-5 flex-col gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary hover:text-primary shadow-xs"
                       variant="outline"
                       onClick={() => openPrescribeModal(currentPatient)}
                     >
-                      <Pill className="h-8 w-8 text-primary" />
-                      <span className="font-semibold text-base">Give Prescription</span>
-                      <span className="text-xs text-muted-foreground">Directly syncs to Pharmacy Staff Dashboard</span>
+                      <Pill className="h-7 w-7 text-primary" />
+                      <span className="font-semibold text-sm">Issue Prescription</span>
+                      <span className="text-[11px] text-muted-foreground">Directly sends to Pharmacy Staff</span>
                     </Button>
 
                     {/* Refer */}
                     <Button
-                      className="h-auto py-6 flex-col gap-2 bg-transparent"
+                      className="h-auto py-5 flex-col gap-2 bg-transparent"
                       variant="outline"
-                      onClick={() => {
-                        completeConsultation(currentDoctor.id, 'refer');
-                        setSuccessToast(`Patient referred to specialist.`);
-                        setTimeout(() => setSuccessToast(null), 4000);
-                      }}
+                      onClick={() => setShowReferDialog(true)}
                     >
-                      <ArrowRight className="h-8 w-8" />
-                      <span className="font-semibold text-base">Refer to Specialist</span>
-                      <span className="text-xs text-muted-foreground">Transfer to specialized doctor queue</span>
+                      <ArrowRight className="h-7 w-7" />
+                      <span className="font-semibold text-sm">Refer to Specialist</span>
+                      <span className="text-[11px] text-muted-foreground">Transfer to another doctor queue</span>
                     </Button>
 
                     {/* Admit */}
                     <Button
-                      className="h-auto py-6 flex-col gap-2 bg-transparent"
+                      className="h-auto py-5 flex-col gap-2 bg-transparent"
                       variant="outline"
                       onClick={() => setShowAdmitDialog(true)}
                     >
-                      <BedDouble className="h-8 w-8" />
-                      <span className="font-semibold text-base">Admit Patient</span>
-                      <span className="text-xs text-muted-foreground">Allocate inpatient bed</span>
+                      <BedDouble className="h-7 w-7" />
+                      <span className="font-semibold text-sm">Admit Patient</span>
+                      <span className="text-[11px] text-muted-foreground">Allocate inpatient bed</span>
+                    </Button>
+
+                    {/* Complete & Discharge */}
+                    <Button
+                      className="h-auto py-5 flex-col gap-2 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-500/30"
+                      variant="outline"
+                      onClick={handleDischargeWithoutPrescription}
+                    >
+                      <CheckCircle2 className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+                      <span className="font-semibold text-sm">Discharge Patient</span>
+                      <span className="text-[11px] text-muted-foreground">Consultation complete, no meds</span>
                     </Button>
                   </div>
                 </CardContent>
@@ -495,11 +586,10 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
               <CardContent className="flex flex-col items-center justify-center py-16">
                 <Stethoscope className="h-16 w-16 text-muted-foreground/50 mb-4" />
                 <h3 className="text-xl font-semibold mb-2">No Active Patient in Consultation</h3>
-                <p className="text-muted-foreground mb-4 text-center">
+                <p className="text-muted-foreground mb-4 text-center max-w-md text-sm">
                   {queuePatients.length > 0
-                    ? `${queuePatients.length} patient(s) currently waiting in your queue.`
-                    : 'Your queue is empty right now.'
-                  }
+                    ? `${queuePatients.length} patient(s) waiting in your queue. Call the next patient to begin.`
+                    : 'Your queue is currently clear. You can call patients from the queue tab.'}
                 </p>
                 {queuePatients.length > 0 && (
                   <Button onClick={handleCallNext}>
@@ -521,20 +611,30 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Pill className="h-5 w-5 text-primary" />
-                    Issued Prescriptions Log ({doctorPrescriptions.length})
+                    Issued Prescriptions Log ({displayedPrescriptions.length})
                   </CardTitle>
                   <CardDescription>
-                    All prescriptions issued by {currentDoctor.name} and their real-time pharmacy status
+                    Digital prescriptions and their real-time pharmacy fulfillment status
                   </CardDescription>
                 </div>
-                <div className="relative w-full sm:w-72">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search prescription / patient..."
-                    value={prescriptionSearch}
-                    onChange={(e) => setPrescriptionSearch(e.target.value)}
-                    className="pl-9"
-                  />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant={showAllPrescriptions ? 'secondary' : 'outline'}
+                    onClick={() => setShowAllPrescriptions(!showAllPrescriptions)}
+                    className="text-xs"
+                  >
+                    {showAllPrescriptions ? 'Showing All Hospital Prescriptions' : `Filter: ${currentDoctor.name} Only`}
+                  </Button>
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Search prescription..."
+                      value={prescriptionSearch}
+                      onChange={(e) => setPrescriptionSearch(e.target.value)}
+                      className="pl-8 text-xs h-9"
+                    />
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -548,22 +648,22 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                           <Badge variant="outline" className="font-mono text-xs bg-muted">
                             {rx.id}
                           </Badge>
-                          <span className="font-semibold text-base">{rx.patientName || rx.patientId}</span>
+                          <span className="font-semibold text-base text-foreground">{rx.patientName || rx.patientId}</span>
                           <span className="text-xs text-muted-foreground">
-                            Patient ID: {rx.patientId}
+                            Prescribed by {rx.doctorName || 'Doctor'}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">
-                            Issued: {new Date(rx.issuedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(rx.issuedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           {rx.dispensed ? (
-                            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30">
+                            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               Dispensed by Pharmacy
                             </Badge>
                           ) : (
-                            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 animate-pulse">
+                            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs animate-pulse">
                               <Clock className="h-3 w-3 mr-1" />
                               Pending at Pharmacy
                             </Badge>
@@ -582,10 +682,10 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prescribed Medicines ({rx.items.length})</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                           {rx.items.map((item, i) => (
-                            <div key={i} className="p-2 rounded bg-muted/40 text-xs border">
-                              <p className="font-medium text-foreground">{item.medicineName}</p>
-                              <p className="text-muted-foreground">Dosage: {item.dosage}</p>
-                              <p className="text-muted-foreground">Qty: {item.quantity}</p>
+                            <div key={i} className="p-2.5 rounded bg-muted/40 text-xs border">
+                              <p className="font-semibold text-foreground">{item.medicineName}</p>
+                              <p className="text-muted-foreground text-[11px]">Dosage: {item.dosage}</p>
+                              <p className="text-muted-foreground text-[11px]">Quantity: {item.quantity}</p>
                               {item.instructions && (
                                 <p className="text-[11px] text-primary mt-0.5">Note: {item.instructions}</p>
                               )}
@@ -599,7 +699,7 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   <Pill className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                  <p>No prescriptions found for this search filter.</p>
+                  <p>No prescriptions found matching search filter.</p>
                 </div>
               )}
             </CardContent>
@@ -613,10 +713,10 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               <Pill className="h-6 w-6 text-primary" />
-              Give Prescription
+              Issue Digital Prescription
             </DialogTitle>
             <DialogDescription>
-              Create a digital prescription for <strong className="text-foreground">{targetPatient?.name || currentPatient?.name}</strong>. It will immediately show in the Pharmacy Staff Dashboard.
+              Prescribe medication for <strong className="text-foreground">{targetPatient?.name || currentPatient?.name}</strong>. It will immediately appear on the Pharmacy Staff Dashboard for dispensing.
             </DialogDescription>
           </DialogHeader>
 
@@ -638,13 +738,13 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-semibold">Select Medicines from Hospital Stock</Label>
                 <Button
-                  size="xs"
+                  size="sm"
                   variant={showCustomMed ? 'secondary' : 'outline'}
                   onClick={() => setShowCustomMed(!showCustomMed)}
-                  className="text-xs"
+                  className="text-xs h-7"
                 >
                   <Plus className="h-3.5 w-3.5 mr-1" />
-                  {showCustomMed ? 'Cancel Custom Medicine' : '+ Add Custom Medicine'}
+                  {showCustomMed ? 'Cancel Custom Entry' : '+ Add Custom Medicine'}
                 </Button>
               </div>
 
@@ -653,13 +753,13 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                 <div className="p-3.5 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
                   <p className="text-xs font-semibold text-primary flex items-center gap-1">
                     <Sparkles className="h-3.5 w-3.5" />
-                    Custom Medicine Entry (Outside standard inventory)
+                    Custom Medicine Entry
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs">Medicine Name</Label>
                       <Input
-                        placeholder="e.g. Azithromycin 500mg syrup"
+                        placeholder="e.g. Azithromycin 500mg"
                         value={customMedName}
                         onChange={(e) => setCustomMedName(e.target.value)}
                         className="text-xs"
@@ -680,14 +780,14 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                         type="number"
                         placeholder="Qty"
                         value={customQty}
-                        onChange={(e) => setCustomQty(parseInt(e.target.value) || 1)}
+                        onChange={(e) => setCustomQty(parseInt(e.target.value, 10) || 1)}
                         className="text-xs"
                       />
                     </div>
                     <div>
                       <Label className="text-xs">Special Instructions</Label>
                       <Input
-                        placeholder="e.g. Take after breakfast for 5 days"
+                        placeholder="e.g. For 5 days"
                         value={customInstructions}
                         onChange={(e) => setCustomInstructions(e.target.value)}
                         className="text-xs"
@@ -735,7 +835,7 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                         }
                       }}
                     >
-                      <Checkbox checked={isSelected} readOnly />
+                      <Checkbox checked={isSelected} />
                       <div className="flex-1 min-w-0">
                         <p className="truncate font-medium">{medicine.name}</p>
                         <p className="text-[11px] text-muted-foreground">
@@ -785,12 +885,12 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                             type="number"
                             placeholder="Qty"
                             value={item.quantity}
-                            onChange={(e) => handleUpdateQuantity(item.medicineId, parseInt(e.target.value) || 1)}
+                            onChange={(e) => handleUpdateQuantity(item.medicineId, parseInt(e.target.value, 10) || 1)}
                             className="text-xs h-8 bg-background"
                           />
                         </div>
                         <div>
-                          <Label className="text-[11px] text-muted-foreground">Special Note (Optional)</Label>
+                          <Label className="text-[11px] text-muted-foreground">Special Note</Label>
                           <Input
                             placeholder="e.g. After meals"
                             value={item.instructions || ''}
@@ -806,7 +906,7 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
             ) : (
               <div className="p-4 rounded-lg border border-dashed text-center text-xs text-muted-foreground">
                 <Info className="h-5 w-5 mx-auto mb-1 opacity-50" />
-                Select medicines above or add a custom medicine to populate the prescription.
+                Select medicines from the list above or add custom entries to compile the prescription.
               </div>
             )}
           </div>
@@ -851,7 +951,7 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
                     type === 'icu' && 'text-amber-500',
                     type === 'emergency' && 'text-destructive'
                   )} />
-                  <p className="font-medium capitalize">{type}</p>
+                  <p className="font-medium capitalize text-sm">{type}</p>
                 </div>
               ))}
             </div>
@@ -864,6 +964,52 @@ export function DoctorDashboard({ activeTab }: { activeTab: string }) {
             <Button onClick={handleAdmit}>
               <BedDouble className="h-4 w-4 mr-2" />
               Confirm Admission
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* REFERRAL DIALOG */}
+      <Dialog open={showReferDialog} onOpenChange={setShowReferDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowRight className="h-5 w-5 text-primary" />
+              Refer Patient to Specialist
+            </DialogTitle>
+            <DialogDescription>
+              Transfer <strong className="text-foreground">{currentPatient?.name}</strong> to another department or doctor queue.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold">Select Specialist Doctor</Label>
+              <Select value={selectedReferralDoctorId} onValueChange={setSelectedReferralDoctorId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose specialist doctor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {doctors.filter(d => d.id !== currentDoctor.id).map(doc => (
+                    <SelectItem key={doc.id} value={doc.id}>
+                      {doc.name} &bull; {doc.specialization} ({doc.queue.length} in queue)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReferDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleReferralSubmit}
+              disabled={!selectedReferralDoctorId}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Transfer Patient
             </Button>
           </DialogFooter>
         </DialogContent>
